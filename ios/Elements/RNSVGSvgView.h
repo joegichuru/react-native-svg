@@ -55,6 +55,10 @@
 
 - (RNSVGNode *)getDefinedMask:(NSString *)maskName;
 
+- (void)defineFilter:(RNSVGNode *)filter filterName:(NSString *)filterName;
+
+- (RNSVGNode *)getDefinedFilter:(NSString *)filterName;
+
 - (NSString *)getDataURL;
 
 - (NSString *)getDataURLwithBounds:(CGRect)bounds;

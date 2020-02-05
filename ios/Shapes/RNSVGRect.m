@@ -29,22 +29,22 @@
     _y = y;
 }
 
-- (void)setRectwidth:(RNSVGLength *)rectwidth
+- (void)setWidth:(RNSVGLength *)width
 {
-    if ([rectwidth isEqualTo:_rectwidth]) {
+    if ([width isEqualTo:_width]) {
         return;
     }
     [self invalidate];
-    _rectwidth = rectwidth;
+    _width = width;
 }
 
-- (void)setRectheight:(RNSVGLength *)rectheight
+- (void)setHeight:(RNSVGLength *)height
 {
-    if ([rectheight isEqualTo:_rectheight]) {
+    if ([height isEqualTo:_height]) {
         return;
     }
     [self invalidate];
-    _rectheight = rectheight;
+    _height = height;
 }
 
 - (void)setRx:(RNSVGLength *)rx
@@ -70,21 +70,16 @@
     CGMutablePathRef path = CGPathCreateMutable();
     CGFloat x = [self relativeOnWidth:self.x];
     CGFloat y = [self relativeOnHeight:self.y];
-    CGFloat width = [self relativeOnWidth:self.rectwidth];
-    CGFloat height = [self relativeOnHeight:self.rectheight];
+    CGFloat width = [self relativeOnWidth:self.width];
+    CGFloat height = [self relativeOnHeight:self.height];
+    CGFloat rx = [self relativeOnWidth:self.rx];
+    CGFloat ry = [self relativeOnHeight:self.ry];
 
-    if (self.rx != nil || self.ry != nil) {
-        CGFloat rx = 0;
-        CGFloat ry = 0;
-        if (self.rx == nil) {
-            ry = [self relativeOnHeight:self.ry];
+    if (rx != 0 || ry != 0) {
+        if (rx == 0) {
             rx = ry;
-        } else if (self.ry == nil) {
-            rx = [self relativeOnWidth:self.rx];
+        } else if (ry == 0) {
             ry = rx;
-        } else {
-            rx = [self relativeOnWidth:self.rx];
-            ry = [self relativeOnHeight:self.ry];
         }
 
         if (rx > width / 2) {

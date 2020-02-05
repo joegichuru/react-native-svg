@@ -16,8 +16,6 @@
 @interface RNSVGUse : RNSVGRenderable
 
 @property (nonatomic, strong) NSString *href;
-@property (nonatomic, strong) RNSVGLength *x;
-@property (nonatomic, strong) RNSVGLength *y;
-@property (nonatomic, strong) RNSVGLength *usewidth;
-@property (nonatomic, strong) RNSVGLength *useheight;
+@property (nonatomic, strong) RNSVGLength *width;
+@property (nonatomic, strong) RNSVGLength *height;
 @end

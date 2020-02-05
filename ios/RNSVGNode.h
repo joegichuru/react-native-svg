@@ -13,7 +13,7 @@
 
 /**
  * RNSVG nodes are implemented as base UIViews. They should be implementation for all basic
- ＊interfaces for all non-definition nodes.
+ ＊interfaces for all non-defination nodes.
  */
 
 @interface RNSVGNode : UIView
@@ -27,33 +27,18 @@ extern CGFloat const RNSVG_M_SQRT1_2l;
 extern CGFloat const RNSVG_DEFAULT_FONT_SIZE;
 
 @property (nonatomic, strong) NSString *name;
-@property (nonatomic, strong) NSString *display;
 @property (nonatomic, assign) CGFloat opacity;
 @property (nonatomic, assign) RNSVGCGFCRule clipRule;
 @property (nonatomic, strong) NSString *clipPath;
 @property (nonatomic, strong) NSString *mask;
-@property (nonatomic, strong) NSString *markerStart;
-@property (nonatomic, strong) NSString *markerMid;
-@property (nonatomic, strong) NSString *markerEnd;
+@property (nonatomic, strong) NSString *filter;
 @property (nonatomic, assign) BOOL responsible;
-@property (nonatomic, assign) CGAffineTransform ctm;
-@property (nonatomic, assign) CGAffineTransform screenCTM;
 @property (nonatomic, assign) CGAffineTransform matrix;
-@property (nonatomic, assign) CGAffineTransform transforms;
 @property (nonatomic, assign) CGAffineTransform invmatrix;
 @property (nonatomic, assign) CGAffineTransform invTransform;
 @property (nonatomic, assign) BOOL active;
-@property (nonatomic, assign) BOOL dirty;
-@property (nonatomic, assign) BOOL merging;
-@property (nonatomic, assign) BOOL skip;
 @property (nonatomic, assign) CGPathRef path;
-@property (nonatomic, assign) CGPathRef strokePath;
-@property (nonatomic, assign) CGPathRef markerPath;
 @property (nonatomic, assign) CGRect clientRect;
-@property (nonatomic, assign) CGRect pathBounds;
-@property (nonatomic, assign) CGRect fillBounds;
-@property (nonatomic, assign) CGRect strokeBounds;
-@property (nonatomic, assign) CGRect markerBounds;
 @property (nonatomic, copy) RCTDirectEventBlock onLayout;
 
 
@@ -70,9 +55,9 @@ extern CGFloat const RNSVG_DEFAULT_FONT_SIZE;
 - (void)renderTo:(CGContextRef)context rect:(CGRect)rect;
 
 /**
- * @abstract
  * renderTo will take opacity into account and draw renderLayerTo off-screen if there is opacity
  * specified, then composite that onto the context. renderLayerTo always draws at opacity=1.
+ * @abstract
  */
 - (void)renderLayerTo:(CGContextRef)context rect:(CGRect)rect;
 
@@ -127,8 +112,6 @@ extern CGFloat const RNSVG_DEFAULT_FONT_SIZE;
 
 - (void)traverseSubviews:(BOOL (^)(__kindof UIView *node))block;
 
-- (void)clearChildCache;
-
-- (void)clearPath;
+- (void)releaseCachedPath;
 
 @end

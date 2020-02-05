@@ -159,13 +159,11 @@ RCT_CUSTOM_VIEW_PROPERTY(transform, CATransform3D, RNSVGNode)
     CATransform3D transform3d = json ? [RNSVGNodeManager CATransform3D:json] : defaultView.layer.transform;
     CGAffineTransform transform = CATransform3DGetAffineTransform(transform3d);
     view.invTransform = CGAffineTransformInvert(transform);
-    view.transforms = transform;
+    view.transform = transform;
     [view invalidate];
 }
 RCT_EXPORT_VIEW_PROPERTY(mask, NSString)
-RCT_EXPORT_VIEW_PROPERTY(markerStart, NSString)
-RCT_EXPORT_VIEW_PROPERTY(markerMid, NSString)
-RCT_EXPORT_VIEW_PROPERTY(markerEnd, NSString)
+RCT_EXPORT_VIEW_PROPERTY(filter, NSString)
 RCT_EXPORT_VIEW_PROPERTY(clipPath, NSString)
 RCT_EXPORT_VIEW_PROPERTY(clipRule, RNSVGCGFCRule)
 RCT_EXPORT_VIEW_PROPERTY(responsible, BOOL)
@@ -229,10 +227,6 @@ RCT_CUSTOM_SHADOW_PROPERTY(aspectRatio, id, RNSVGNode) {}
 
 RCT_CUSTOM_SHADOW_PROPERTY(overflow, id, RNSVGNode) {}
 RCT_CUSTOM_SHADOW_PROPERTY(display, id, RNSVGNode) {}
-RCT_CUSTOM_VIEW_PROPERTY(display, id, RNSVGNode)
-{
-    view.display = json;
-}
 
 RCT_CUSTOM_SHADOW_PROPERTY(direction, id, RNSVGNode) {}
 

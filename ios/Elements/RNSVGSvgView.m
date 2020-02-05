@@ -16,8 +16,9 @@
     NSMutableDictionary<NSString *, RNSVGNode *> *_clipPaths;
     NSMutableDictionary<NSString *, RNSVGNode *> *_templates;
     NSMutableDictionary<NSString *, RNSVGPainter *> *_painters;
-    NSMutableDictionary<NSString *, RNSVGNode *> *_markers;
     NSMutableDictionary<NSString *, RNSVGNode *> *_masks;
+    NSMutableDictionary<NSString *, RNSVGNode *> *_filters;
+    CGAffineTransform _viewBoxTransform;
     CGAffineTransform _invviewBoxTransform;
     bool rendered;
 }
@@ -51,38 +52,23 @@
     // Do nothing, as subviews are inserted by insertReactSubview:
 }
 
-- (void)clearChildCache
+- (void)releaseCachedPath
 {
     if (!rendered) {
         return;
     }
     rendered = false;
-    for (__kindof RNSVGNode *node in self.subviews) {
+    for (UIView *node in self.subviews) {
         if ([node isKindOfClass:[RNSVGNode class]]) {
-            [node clearChildCache];
+            RNSVGNode *n = (RNSVGNode *)node;
+            [n releaseCachedPath];
         }
-    }
+    };
 }
 
 - (void)invalidate
 {
-    UIView* parent = self.superview;
-    if ([parent isKindOfClass:[RNSVGNode class]]) {
-        if (!rendered) {
-            return;
-        }
-        RNSVGNode* svgNode = (RNSVGNode*)parent;
-        [svgNode invalidate];
-        rendered = false;
-        return;
-    }
     [self setNeedsDisplay];
-}
-
-- (void)tintColorDidChange
-{
-    [self invalidate];
-    [self clearChildCache];
 }
 
 - (void)setMinX:(CGFloat)minX
@@ -92,7 +78,7 @@
     }
 
     [self invalidate];
-    [self clearChildCache];
+    [self releaseCachedPath];
     _minX = minX;
 }
 
@@ -103,7 +89,7 @@
     }
 
     [self invalidate];
-    [self clearChildCache];
+    [self releaseCachedPath];
     _minY = minY;
 }
 
@@ -114,7 +100,7 @@
     }
 
     [self invalidate];
-    [self clearChildCache];
+    [self releaseCachedPath];
     _vbWidth = vbWidth;
 }
 
@@ -125,29 +111,29 @@
     }
 
     [self invalidate];
-    [self clearChildCache];
+    [self releaseCachedPath];
     _vbHeight = vbHeight;
 }
 
-- (void)setBbWidth:(RNSVGLength *)bbWidth
+- (void)setBbWidth:(NSString *)bbWidth
 {
-    if ([bbWidth isEqualTo:_bbWidth]) {
+    if ([bbWidth isEqualToString:_bbWidth]) {
         return;
     }
 
     [self invalidate];
-    [self clearChildCache];
+    [self releaseCachedPath];
     _bbWidth = bbWidth;
 }
 
-- (void)setBbHeight:(RNSVGLength *)bbHeight
+- (void)setBbHeight:(NSString *)bbHeight
 {
-    if ([bbHeight isEqualTo:_bbHeight]) {
+    if ([bbHeight isEqualToString:_bbHeight]) {
         return;
     }
 
     [self invalidate];
-    [self clearChildCache];
+    [self releaseCachedPath];
     _bbHeight = bbHeight;
 }
 
@@ -158,7 +144,7 @@
     }
 
     [self invalidate];
-    [self clearChildCache];
+    [self releaseCachedPath];
     _align = align;
 }
 
@@ -169,25 +155,21 @@
     }
 
     [self invalidate];
-    [self clearChildCache];
+    [self releaseCachedPath];
     _meetOrSlice = meetOrSlice;
 }
 
 - (void)drawToContext:(CGContextRef)context withRect:(CGRect)rect {
-    rendered = true;
+
     self.initialCTM = CGContextGetCTM(context);
     self.invInitialCTM = CGAffineTransformInvert(self.initialCTM);
     if (self.align) {
-        CGRect tRect = CGRectMake(self.minX, self.minY, self.vbWidth, self.vbHeight);
-        _viewBoxTransform = [RNSVGViewBox getTransform:tRect
+        _viewBoxTransform = [RNSVGViewBox getTransform:CGRectMake(self.minX, self.minY, self.vbWidth, self.vbHeight)
                                                  eRect:rect
                                                  align:self.align
                                            meetOrSlice:self.meetOrSlice];
         _invviewBoxTransform = CGAffineTransformInvert(_viewBoxTransform);
         CGContextConcatCTM(context, _viewBoxTransform);
-    } else {
-        _viewBoxTransform = CGAffineTransformIdentity;
-        _invviewBoxTransform = CGAffineTransformIdentity;
     }
 
     for (UIView *node in self.subviews) {
@@ -241,6 +223,8 @@
 
         if (event) {
             node.active = NO;
+        } else if (node.active) {
+            return node;
         }
 
         UIView *hitChild = [node hitTest:transformed withEvent:event];
@@ -253,26 +237,11 @@
     return nil;
 }
 
+
 - (NSString *)getDataURL
 {
     UIGraphicsBeginImageContextWithOptions(_boundingBox.size, NO, 0);
-    [self clearChildCache];
     [self drawRect:_boundingBox];
-    [self clearChildCache];
-    [self invalidate];
-    NSData *imageData = UIImagePNGRepresentation(UIGraphicsGetImageFromCurrentImageContext());
-    NSString *base64 = [imageData base64EncodedStringWithOptions:NSDataBase64Encoding64CharacterLineLength];
-    UIGraphicsEndImageContext();
-    return base64;
-}
-
-- (NSString *)getDataURLwithBounds:(CGRect)bounds
-{
-    UIGraphicsBeginImageContextWithOptions(bounds.size, NO, 1);
-    [self clearChildCache];
-    [self drawRect:bounds];
-    [self clearChildCache];
-    [self invalidate];
     NSData *imageData = UIImagePNGRepresentation(UIGraphicsGetImageFromCurrentImageContext());
     NSString *base64 = [imageData base64EncodedStringWithOptions:NSDataBase64Encoding64CharacterLineLength];
     UIGraphicsEndImageContext();
@@ -324,19 +293,6 @@
     return _painters ? [_painters objectForKey:painterName] : nil;
 }
 
-- (void)defineMarker:(RNSVGNode *)marker markerName:(NSString *)markerName
-{
-    if (!_markers) {
-        _markers = [[NSMutableDictionary alloc] init];
-    }
-    [_markers setObject:marker forKey:markerName];
-}
-
-- (RNSVGNode *)getDefinedMarker:(NSString *)markerName;
-{
-    return _markers ? [_markers objectForKey:markerName] : nil;
-}
-
 - (void)defineMask:(RNSVGNode *)mask maskName:(NSString *)maskName
 {
     if (!_masks) {
@@ -348,6 +304,19 @@
 - (RNSVGNode *)getDefinedMask:(NSString *)maskName;
 {
     return _masks ? [_masks objectForKey:maskName] : nil;
+}
+
+- (void)defineFilter:(RNSVGNode *)filter filterName:(NSString *)filterName
+{
+    if (!_filters) {
+        _filters = [[NSMutableDictionary alloc] init];
+    }
+    [_filters setObject:filter forKey:filterName];
+}
+
+- (RNSVGNode *)getDefinedFilter:(NSString *)filterName;
+{
+    return _filters ? [_filters objectForKey:filterName] : nil;
 }
 
 - (CGRect)getContextBounds

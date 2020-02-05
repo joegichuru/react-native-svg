@@ -36,12 +36,7 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
 {
     if (self = [super init]) {
         self.opacity = 1;
-        self.opaque = false;
-        self.matrix = CGAffineTransformIdentity;
-        self.transforms = CGAffineTransformIdentity;
         self.invTransform = CGAffineTransformIdentity;
-        _merging = false;
-        _dirty = false;
     }
     return self;
 }
@@ -66,10 +61,6 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
 
 - (void)invalidate
 {
-    if (_dirty || _merging) {
-        return;
-    }
-    _dirty = true;
     id<RNSVGContainer> container = (id<RNSVGContainer>)self.superview;
     [container invalidate];
     [self clearPath];
@@ -80,34 +71,9 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
 
 - (void)clearPath
 {
-    CGPathRelease(_path);
-    self.path = nil;
-}
-
-- (void)clearChildCache
-{
-    [self clearPath];
-    for (__kindof RNSVGNode *node in self.subviews) {
-        if ([node isKindOfClass:[RNSVGNode class]]) {
-            [node clearChildCache];
-        }
-    }
-}
-
-- (void)clearParentCache
-{
-    RNSVGNode* node = self;
-    while (node != nil) {
-        UIView* parent = [node superview];
-
-        if (![parent isKindOfClass:[RNSVGNode class]]) {
-            return;
-        }
-        node = (RNSVGNode*)parent;
-        if (!node.path) {
-            return;
-        }
-        [node clearPath];
+    if (_path) {
+        CGPathRelease(_path);
+        _path = nil;
     }
 }
 
@@ -173,16 +139,6 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
 
     [self invalidate];
     _name = name;
-}
-
-- (void)setDisplay:(NSString *)display
-{
-    if ([display isEqualToString:_display]) {
-        return;
-    }
-
-    [self invalidate];
-    _display = display;
 }
 
 - (void)setOpacity:(CGFloat)opacity
@@ -266,30 +222,12 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
     [self invalidate];
 }
 
-- (void)setMarkerStart:(NSString *)markerStart
+- (void)setFilter:(NSString *)filter
 {
-    if ([_markerStart isEqualToString:markerStart]) {
+    if ([_filter isEqualToString:filter]) {
         return;
     }
-    _markerStart = markerStart;
-    [self invalidate];
-}
-
-- (void)setMarkerMid:(NSString *)markerMid
-{
-    if ([_markerMid isEqualToString:markerMid]) {
-        return;
-    }
-    _markerMid = markerMid;
-    [self invalidate];
-}
-
-- (void)setMarkerEnd:(NSString *)markerEnd
-{
-    if ([_markerEnd isEqualToString:markerEnd]) {
-        return;
-    }
-    _markerEnd = markerEnd;
+    _filter = filter;
     [self invalidate];
 }
 
@@ -309,7 +247,6 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
 
 - (void)renderTo:(CGContextRef)context rect:(CGRect)rect
 {
-    self.dirty = false;
     // abstract
 }
 
@@ -322,16 +259,11 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
 {
     if (self.clipPath) {
         _clipNode = (RNSVGClipPath*)[self.svgView getDefinedClipPath:self.clipPath];
-        if (_cachedClipPath) {
-            CGPathRelease(_cachedClipPath);
-        }
-        CGAffineTransform transform = CGAffineTransformConcat(_clipNode.matrix, _clipNode.transforms);
-        _cachedClipPath = CGPathCreateCopyByTransformingPath([_clipNode getPath:context], &transform);
-        CGPathRetain(_cachedClipPath);
+        _cachedClipPath = CGPathRetain([_clipNode getPath:context]);
         if (_clipMask) {
             CGImageRelease(_clipMask);
         }
-        if ([_clipNode isSimpleClipPath] || _clipNode.clipRule == kRNSVGCGFCRuleEvenodd) {
+        if ([_clipNode isSimpleClipPath]) {
             _clipMask = nil;
         } else {
             CGRect bounds = CGContextGetClipBoundingBox(context);
@@ -572,7 +504,6 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
 
 - (void)parseReference
 {
-    self.dirty = false;
     if (self.name) {
         typeof(self) __weak weakSelf = self;
         [self.svgView defineTemplate:weakSelf templateName:self.name];
@@ -588,12 +519,21 @@ CGFloat const RNSVG_DEFAULT_FONT_SIZE = 12;
     }
 }
 
+- (void)releaseCachedPath
+{
+    [self clearPath];
+    [self traverseSubviews:^BOOL(__kindof RNSVGNode *node) {
+        if ([node isKindOfClass:[RNSVGNode class]]) {
+            [node releaseCachedPath];
+        }
+        return YES;
+    }];
+}
+
 - (void)dealloc
 {
     CGPathRelease(_cachedClipPath);
-    CGPathRelease(_strokePath);
     CGImageRelease(_clipMask);
-    CGPathRelease(_path);
     _clipMask = nil;
 }
 
